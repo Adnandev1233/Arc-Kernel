@@ -88,7 +88,8 @@ The bootloader is implemented in two stages:
 
 The kernel is loaded at the specified memory location and takes control from there. 
 
-##build support
+##build-support
+
 1.Linux(best option)
 2.MacOS(second best option)
 3.Windows(hard but possible)
