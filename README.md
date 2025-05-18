@@ -87,3 +87,8 @@ The bootloader is implemented in two stages:
 2. Stage 2 (`bootloader_stage2.asm`): Enables A20 line, enters protected mode, and loads the kernel
 
 The kernel is loaded at the specified memory location and takes control from there. 
+
+##build support
+1.Linux(best option)
+2.MacOS(second best option)
+3.Windows(hard but possible)
