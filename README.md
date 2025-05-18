@@ -1,6 +1,6 @@
 # Custom Operating System
 
-This is a custom operating system with a two-stage bootloader and kernel implementation.
+This is a custom operating system with a two-stage bootloader and kernel implementation.Why it is called kernel and os at the same time is this can be modified and added a ui in this case it has a basic shell.
 
 ## Prerequisites
 
