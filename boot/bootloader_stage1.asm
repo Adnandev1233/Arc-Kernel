@@ -43,11 +43,20 @@ reset_disk:
     jmp reset_disk
 
 check_disk_status:
-    mov ah, 0x01        ; Get disk status
+    ; Get disk parameters
+    mov ah, 0x08        ; Get drive parameters
     mov dl, [boot_drive]
     int 0x13
-    test ah, ah         ; Check if status is 0 (no error)
-    jnz disk_error
+    jc disk_error       ; If carry set, error occurred
+
+    ; Save drive parameters
+    mov [drive_heads], dh
+    mov [drive_sectors], cl
+    and byte [drive_sectors], 0x3F  ; Clear high bits
+    mov cl, ch
+    mov ch, cl
+    shr cl, 6
+    mov [drive_cylinders], cx
 
 load_stage2:
     mov si, msg_loading_stage2
@@ -85,7 +94,7 @@ disk_error:
     
     ; Print specific error code
     mov al, ah          ; Error code is in AH
-    call print_hex      ; New function to print hex value
+    call print_hex      ; Print hex value
     
     jmp $           ; Infinite loop
 
@@ -138,6 +147,9 @@ msg_disk_error db 'Disk error! Code: ', 0
 msg_retry db 'Retrying disk reset...', 13, 10, 0
 boot_drive db 0
 retry_count db MAX_RETRIES
+drive_heads db 0
+drive_sectors db 0
+drive_cylinders dw 0
 
 ; Padding and boot signature
 times 510-($-$$) db 0

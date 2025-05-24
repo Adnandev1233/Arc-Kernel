@@ -18,10 +18,10 @@ struct idt_ptr {
     uint32_t base;
 } __attribute__((packed));
 
-// Interrupt frame structure
+// Interrupt frame structure (matches struct regs)
 struct interrupt_frame {
-    uint32_t gs, fs, es, ds;                         // Pushed by us
-    uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax; // Pushed by pusha
+    uint32_t gs, fs, es, ds;                         // Segment registers
+    uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax; // General purpose registers
     uint32_t int_no, err_code;                       // Interrupt number and error code
     uint32_t eip, cs, eflags, useresp, ss;          // Pushed by CPU automatically
 };

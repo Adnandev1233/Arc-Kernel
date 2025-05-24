@@ -5,25 +5,32 @@ OUTPUT_ARCH(i386)
 
 SECTIONS
 {
-    . = 0x1000;    /* Kernel is loaded at 0x1000 by bootloader */
+    . = 1M;    /* Kernel is loaded at 1MB */
 
-    .text : {
-        *(.multiboot)  /* Multiboot header first */
+    .text BLOCK(4K) : ALIGN(4K)
+    {
+        *(.multiboot)  /* Multiboot header must be first */
         *(.text)       /* Code */
     }
 
-    .rodata ALIGN(4K) : {
+    .rodata BLOCK(4K) : ALIGN(4K)
+    {
         *(.rodata)     /* Read-only data */
     }
 
-    .data ALIGN(4K) : {
+    .data BLOCK(4K) : ALIGN(4K)
+    {
         *(.data)       /* Read-write data */
     }
 
-    .bss ALIGN(4K) : {
+    .bss BLOCK(4K) : ALIGN(4K)
+    {
         *(COMMON)      /* Common symbols */
         *(.bss)        /* Zero-initialized data */
+        *(.bootstrap_stack)  /* Stack for early boot */
     }
+
+    .note.GNU-stack : { *(.note.GNU-stack) }
 
     /* End of kernel */
     end = .;

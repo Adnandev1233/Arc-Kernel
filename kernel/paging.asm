@@ -3,40 +3,21 @@ global enable_paging
 
 section .text
 enable_paging:
-    ; Save registers
     push ebp
     mov ebp, esp
-    push ebx
-    push ecx
-    push edx
     
-    ; Load page directory address from parameter
+    ; Get page directory address
     mov eax, [ebp + 8]
     
-    ; Disable interrupts
-    cli
-    
-    ; Save current CR0
-    mov ebx, cr0
-    
-    ; Disable paging and write protect
-    and ebx, 0x7fffffff    ; Clear PG bit
-    mov cr0, ebx
-    
-    ; Invalidate TLB by reloading CR3
+    ; Set CR3 to page directory
     mov cr3, eax
     
     ; Enable paging
-    or ebx, 0x80000000     ; Set PG bit
-    mov cr0, ebx
+    mov eax, cr0
+    or eax, 0x80000000
+    mov cr0, eax
     
-    ; Restore registers
-    pop edx
-    pop ecx
-    pop ebx
     pop ebp
-    
-    ; Return
     ret
 
 align 4

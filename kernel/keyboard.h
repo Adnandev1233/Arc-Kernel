@@ -5,6 +5,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+// Keyboard buffer size
+#define KEYBOARD_BUFFER_SIZE 256
+
 // Special key codes
 #define KEY_UP      0x48
 #define KEY_DOWN    0x50

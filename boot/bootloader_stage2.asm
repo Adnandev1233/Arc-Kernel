@@ -132,18 +132,36 @@ load_kernel:
     mov es, ax
     xor bx, bx          ; ES:BX = KERNEL_SEGMENT:0
 
-    mov ah, 0x02        ; BIOS read sectors
-    mov al, KERNEL_SECTORS
-    mov ch, 0           ; Cylinder 0
-    mov cl, 10          ; Start from sector 10
-    mov dh, 0           ; Head 0
+    ; Calculate LBA for kernel start
+    mov ax, 10          ; Start from sector 10
+    mov cx, KERNEL_SECTORS
     mov dl, [boot_drive]
+
+.load_sectors:
+    push ax             ; Save LBA
+    push cx             ; Save sector count
+
+    ; Convert LBA to CHS
+    mov cl, [drive_sectors]
+    div cl              ; AX / CL = AL (quotient), AH (remainder)
+    mov cl, ah          ; Sector number (1-based)
+    inc cl
+    mov ah, 0
+    mov ch, al          ; Cylinder number
+    mov dh, 0           ; Head number
+
+    ; Read sectors
+    mov ah, 0x02        ; BIOS read sectors
+    mov al, 1           ; Read one sector at a time
     int 0x13
     jc disk_error
 
-    ; Verify sectors read
-    cmp al, KERNEL_SECTORS
-    jne disk_error
+    ; Move to next sector
+    pop cx              ; Restore sector count
+    pop ax              ; Restore LBA
+    inc ax              ; Next LBA
+    add bx, 512         ; Next buffer position
+    loop .load_sectors
 
     mov si, msg_kernel_ok
     call print_string
@@ -242,7 +260,7 @@ protected_mode:
     mov eax, MULTIBOOT_HEADER_MAGIC  ; Magic number in eax
     mov ebx, memory_map              ; Pointer to memory map in ebx
 
-    ; Jump to kernel (note: removed pushes as we pass in eax/ebx per spec)
+    ; Jump to kernel
     jmp CODE_SEG:KERNEL_LOAD_ADDR
 
 ; Data section
@@ -257,6 +275,7 @@ msg_disk_error db 'Disk error!', 13, 10, 0
 msg_a20 db 'Enabling A20 line...', 13, 10, 0
 msg_a20_ok db 'A20 line enabled', 13, 10, 0
 boot_drive db 0
+drive_sectors db 0
 
 ; Memory map buffer
 align 4

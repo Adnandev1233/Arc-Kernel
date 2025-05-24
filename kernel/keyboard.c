@@ -1,6 +1,11 @@
 #include <io.h>
 #include "keyboard.h"
 #include "terminal.h"
+#include <stdint.h>
+
+// Command buffer
+extern char command_buffer[KEYBOARD_BUFFER_SIZE];
+extern size_t command_pos;
 
 // Keyboard ports
 #define KEYBOARD_DATA_PORT 0x60
@@ -37,6 +42,18 @@ static const char scancode_to_ascii_shift[] = {
     0, '|', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', '<', '>', '?', 0,
     '*', 0, ' '
 };
+
+// Convert scancode to ASCII
+char get_ascii_from_scancode(uint8_t scancode) {
+    if (scancode < sizeof(scancode_to_ascii)) {
+        if (shift_pressed || caps_lock) {
+            return scancode_to_ascii_shift[scancode];
+        } else {
+            return scancode_to_ascii[scancode];
+        }
+    }
+    return 0;
+}
 
 void keyboard_init(void) {
     // Reset keyboard state
@@ -115,15 +132,8 @@ bool keyboard_process_scancode(uint8_t scancode, char* c) {
             return false;
             
         default:
-            if (scancode < sizeof(scancode_to_ascii)) {
-                if (shift_pressed || caps_lock) {
-                    *c = scancode_to_ascii_shift[scancode];
-                } else {
-                    *c = scancode_to_ascii[scancode];
-                }
-                return (*c != 0);
-            }
-            return false;
+            *c = get_ascii_from_scancode(scancode);
+            return (*c != 0);
     }
 }
 
@@ -215,4 +225,13 @@ void keyboard_update_command_line(char* buffer, size_t* pos, size_t max_size) {
             terminal_putchar(c);
         }
     }
+}
+
+// Keyboard handler
+void keyboard_handler(void) {
+    // Update command line with the new scancode
+    keyboard_update_command_line(command_buffer, &command_pos, KEYBOARD_BUFFER_SIZE);
+    
+    // Acknowledge the interrupt
+    port_out_byte(0x20, 0x20);  // Send EOI to master PIC
 } 

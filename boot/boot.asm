@@ -1,62 +1,48 @@
-; Multiboot header constants
-MBALIGN     equ 1 << 0            ; align loaded modules on page boundaries
-MEMINFO     equ 1 << 1            ; provide memory map
-VIDINFO     equ 1 << 2            ; provide video info
-FLAGS       equ MBALIGN | MEMINFO | VIDINFO  ; this is the Multiboot 'flag' field
-MAGIC       equ 0x1BADB002        ; 'magic number' lets bootloader find the header
-CHECKSUM    equ -(MAGIC + FLAGS)  ; checksum of above to prove we are multiboot
+[BITS 32]
 
-; Multiboot header - MUST be first!
+; Multiboot header constants
+MULTIBOOT_PAGE_ALIGN    equ 1<<0
+MULTIBOOT_MEM_INFO      equ 1<<1
+MULTIBOOT_HEADER_MAGIC  equ 0x1BADB002
+MULTIBOOT_HEADER_FLAGS  equ MULTIBOOT_PAGE_ALIGN | MULTIBOOT_MEM_INFO
+MULTIBOOT_CHECKSUM      equ -(MULTIBOOT_HEADER_MAGIC + MULTIBOOT_HEADER_FLAGS)
+
+; Kernel stack size
+KERNEL_STACK_SIZE equ 16384
+
 section .multiboot
 align 4
-    dd MAGIC
-    dd FLAGS
-    dd CHECKSUM
-    dd 0, 0, 0, 0, 0             ; unused fields for header addr, load addr, etc
-    dd 0                         ; graphics mode
-    dd 800, 600, 32             ; width, height, depth
+    dd MULTIBOOT_HEADER_MAGIC
+    dd MULTIBOOT_HEADER_FLAGS
+    dd MULTIBOOT_CHECKSUM
 
 section .bss
 align 16
 stack_bottom:
-    resb 16384 ; 16 KiB
+    resb KERNEL_STACK_SIZE
 stack_top:
 
 section .text
-global _start:function (_start.end - _start)
+global _start
 extern kernel_main
+extern kernel_init
 
 _start:
-    ; Set up the stack
+    ; Set up stack
     mov esp, stack_top
-
-    ; Clear interrupts
-    cli
-
-    ; Clear EFLAGS
-    push 0
-    popf
-
-    ; Initialize segment registers
-    mov ax, 0x10
-    mov ds, ax
-    mov es, ax
-    mov fs, ax
-    mov gs, ax
-    mov ss, ax
-
-    ; Push multiboot info
-    push ebx    ; Multiboot structure pointer
+    
+    ; Save multiboot information
+    push ebx    ; Multiboot info structure
     push eax    ; Multiboot magic number
-
-    ; Jump to kernel
+    
+    ; Initialize kernel
+    call kernel_init
+    
+    ; Call kernel main
     call kernel_main
-
-    ; If kernel returns, halt the CPU
-    cli
+    
+    ; If kernel_main returns, halt
 .hang:
+    cli
     hlt
-    jmp .hang
-.end:
-
-section .note.GNU-stack noalloc noexec nowrite progbits 
+    jmp .hang 

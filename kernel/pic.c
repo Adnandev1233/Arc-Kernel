@@ -1,5 +1,6 @@
-#include "include/pic.h"
-#include "include/io.h"
+#include <pic.h>
+#include <io.h>
+#include <stdint.h>
 
 // PIC ports
 #define PIC1_COMMAND 0x20
@@ -22,10 +23,6 @@
 #define ICW4_SFNM       0x10
 
 void init_pic(void) {
-    // Save masks
-    uint8_t mask1 = port_in_byte(PIC1_DATA);
-    uint8_t mask2 = port_in_byte(PIC2_DATA);
-
     // Start initialization sequence
     port_out_byte(PIC1_COMMAND, ICW1_INIT | ICW1_ICW4);
     io_wait();
@@ -51,7 +48,14 @@ void init_pic(void) {
     port_out_byte(PIC2_DATA, ICW4_8086);
     io_wait();
 
-    // Restore saved masks
-    port_out_byte(PIC1_DATA, mask1);
-    port_out_byte(PIC2_DATA, mask2);
+    // Mask all interrupts except keyboard (IRQ1)
+    port_out_byte(PIC1_DATA, 0xFD);  // 1111 1101 - only enable IRQ1
+    port_out_byte(PIC2_DATA, 0xFF);  // Mask all interrupts on slave PIC
+
+    // Clear any pending interrupts
+    port_out_byte(PIC1_COMMAND, 0x20);
+    port_out_byte(PIC2_COMMAND, 0x20);
+
+    // Enable interrupts
+    __asm__("sti");
 } 

@@ -1,117 +1,124 @@
 # Compiler and linker settings
-CC = gcc
 AS = nasm
+CC = gcc
 LD = ld
 
-# Directories
-KERNEL_DIR = kernel
-BOOT_DIR = boot
-BUILD_DIR = build
-ISO_DIR = iso
-INCLUDE_DIR = include
-LIB_DIR = lib
+# Colors for output
+GREEN = \033[0;32m
+BLUE = \033[0;34m
+YELLOW = \033[0;33m
+RED = \033[0;31m
+NC = \033[0m
 
-# Compiler flags
-CFLAGS = -m32 -nostdlib -fno-builtin -fno-stack-protector \
-         -nostartfiles -nodefaultlibs -Wall -Wextra -c \
-         -I$(KERNEL_DIR) -I$(INCLUDE_DIR) -I$(KERNEL_DIR)/include \
-         -ffreestanding -fno-pie -O2
-
-# Assembler flags
+# Flags
 ASFLAGS = -f elf32
+CFLAGS = -m32 -ffreestanding -fno-pie -fno-stack-protector -nostdlib -c -I$(INCLUDE_DIR) -Wall -Wextra -masm=intel
+LDFLAGS = -m elf_i386 -T kernel/linker.ld -nostdlib
 
-# Linker flags
-LDFLAGS = -m elf_i386 \
-          -T linker.ld \
-          --no-dynamic-linker \
-          -nostdlib \
-          -z max-page-size=0x1000 \
-          -static
+# Directories
+BOOT_DIR = boot
+KERNEL_DIR = kernel
+DRIVERS_DIR = kernel/drivers
+DE_DIR = kernel/de
+INCLUDE_DIR = kernel/include
 
 # Source files
-KERNEL_C_SRCS = $(wildcard $(KERNEL_DIR)/*.c)
-LIB_C_SRCS = $(wildcard $(LIB_DIR)/*.c)
-KERNEL_ASM_SRCS = $(wildcard $(KERNEL_DIR)/*.asm)
+BOOT_SRC = $(BOOT_DIR)/boot.asm
+KERNEL_SRC = $(KERNEL_DIR)/kernel.c
+CPU_SRC = $(KERNEL_DIR)/cpu.c
+MEMORY_SRC = $(KERNEL_DIR)/memory.c
+STRING_SRC = $(KERNEL_DIR)/string.c
+TERMINAL_SRC = $(KERNEL_DIR)/terminal.c
+DRIVERS_SRC = $(wildcard $(DRIVERS_DIR)/*.c)
+DE_SRC = $(DE_DIR)/desktop.c $(DE_DIR)/dock.c $(DE_DIR)/menu_bar.c $(DE_DIR)/window_manager.c
 
 # Object files
-KERNEL_C_OBJS = $(KERNEL_C_SRCS:%.c=$(BUILD_DIR)/%.o)
-LIB_C_OBJS = $(LIB_C_SRCS:%.c=$(BUILD_DIR)/%.o)
-KERNEL_ASM_OBJS = $(KERNEL_ASM_SRCS:%.asm=$(BUILD_DIR)/%.o)
+BOOT_OBJ = $(BOOT_SRC:.asm=.o)
+KERNEL_OBJ = $(KERNEL_SRC:.c=.o)
+CPU_OBJ = $(CPU_SRC:.c=.o)
+MEMORY_OBJ = $(MEMORY_SRC:.c=.o)
+STRING_OBJ = $(STRING_SRC:.c=.o)
+TERMINAL_OBJ = $(TERMINAL_SRC:.c=.o)
+DRIVERS_OBJ = $(DRIVERS_SRC:.c=.o)
+DE_OBJ = $(DE_SRC:.c=.o)
 
-# Final kernel binary
-KERNEL_BIN = $(BUILD_DIR)/kernel.bin
-
-# ISO output
-ISO_OUTPUT = $(BUILD_DIR)/arcos.iso
+# Output files
+KERNEL_BIN = kernel.bin
+ISO_DIR = iso
+ISO_BIN = os.iso
 
 # Default target
-all: directories $(ISO_OUTPUT)
+all: $(ISO_BIN)
+	@echo "$(GREEN)Build completed successfully!$(NC)"
+	@echo "$(BLUE)"
+	@echo "    _    ____   ____  _____  ____  "
+	@echo "   / \  |  _ \ / ___||  ___|/ ___| "
+	@echo "  / _ \ | |_) | |    | |_  \___ \ "
+	@echo " / ___ \|  _ <| |___ |  _|  ___) |"
+	@echo "/_/   \_\_| \_\\____||_|   |____/ "
+	@echo "$(NC)"
 
-# Create necessary directories
-directories:
-	mkdir -p $(BUILD_DIR)
-	mkdir -p $(BUILD_DIR)/$(KERNEL_DIR)
-	mkdir -p $(BUILD_DIR)/$(LIB_DIR)
-	mkdir -p $(ISO_DIR)/boot/grub
+# Build bootloader
+$(BOOT_OBJ): $(BOOT_SRC)
+	@echo "  AS      $<"
+	@$(AS) $(ASFLAGS) -o $@ $<
 
-# Compile C source files
-$(BUILD_DIR)/%.o: %.c
-	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $< -o $@
+# Build kernel
+$(KERNEL_OBJ): $(KERNEL_SRC)
+	@echo "  CC      $<"
+	@$(CC) $(CFLAGS) -o $@ $<
 
-# Compile assembly source files
-$(BUILD_DIR)/%.o: %.asm
-	@mkdir -p $(dir $@)
-	$(AS) $(ASFLAGS) $< -o $@
+# Build CPU
+$(CPU_OBJ): $(CPU_SRC)
+	@echo "  CC      $<"
+	@$(CC) $(CFLAGS) -o $@ $<
+
+# Build memory
+$(MEMORY_OBJ): $(MEMORY_SRC)
+	@echo "  CC      $<"
+	@$(CC) $(CFLAGS) -o $@ $<
+
+# Build string
+$(STRING_OBJ): $(STRING_SRC)
+	@echo "  CC      $<"
+	@$(CC) $(CFLAGS) -o $@ $<
+
+# Build terminal
+$(TERMINAL_OBJ): $(TERMINAL_SRC)
+	@echo "  CC      $<"
+	@$(CC) $(CFLAGS) -o $@ $<
+
+# Build drivers
+$(DRIVERS_OBJ): $(DRIVERS_SRC)
+	@echo "  CC      $<"
+	@$(CC) $(CFLAGS) -o $@ $<
+
+# Build desktop environment
+$(DE_DIR)/%.o: $(DE_DIR)/%.c
+	@echo "  CC      $<"
+	@$(CC) $(CFLAGS) -o $@ $<
 
 # Link kernel
-$(KERNEL_BIN): $(KERNEL_C_OBJS) $(LIB_C_OBJS) $(KERNEL_ASM_OBJS)
-	@echo "Linking kernel..."
-	@echo "Objects: $(KERNEL_C_OBJS) $(LIB_C_OBJS) $(KERNEL_ASM_OBJS)"
-	$(LD) $(LDFLAGS) -o $@ $^
-	@echo "Kernel linked successfully!"
-
-# Create GRUB config
-$(ISO_DIR)/boot/grub/grub.cfg:
-	echo 'set timeout=5' > $@
-	echo 'set default=0' >> $@
-	echo '' >> $@
-	echo 'menuentry "ArcOS" {' >> $@
-	echo '    insmod part_msdos' >> $@
-	echo '    insmod ext2' >> $@
-	echo '    insmod multiboot' >> $@
-	echo '    multiboot /boot/kernel.bin' >> $@
-	echo '    boot' >> $@
-	echo '}' >> $@
-	echo '' >> $@
-	echo 'menuentry "ArcOS (Debug Mode)" {' >> $@
-	echo '    insmod part_msdos' >> $@
-	echo '    insmod ext2' >> $@
-	echo '    insmod multiboot' >> $@
-	echo '    multiboot /boot/kernel.bin debug=1' >> $@
-	echo '    boot' >> $@
-	echo '}' >> $@
+$(KERNEL_BIN): $(BOOT_OBJ) $(KERNEL_OBJ) $(CPU_OBJ) $(MEMORY_OBJ) $(STRING_OBJ) $(TERMINAL_OBJ) $(DRIVERS_OBJ) $(DE_OBJ)
+	@echo "  LD      $@"
+	@$(LD) $(LDFLAGS) $^ -o $@
 
 # Create ISO
-$(ISO_OUTPUT): $(KERNEL_BIN) $(ISO_DIR)/boot/grub/grub.cfg
-	cp $(KERNEL_BIN) $(ISO_DIR)/boot/
-	grub-mkrescue -o $(ISO_OUTPUT) $(ISO_DIR)
+$(ISO_BIN): $(KERNEL_BIN)
+	@echo "  MKDIR   $(ISO_DIR)/boot/grub"
+	@mkdir -p $(ISO_DIR)/boot/grub
+	@echo "  CP      $(KERNEL_BIN) -> $(ISO_DIR)/boot/"
+	@cp $(KERNEL_BIN) $(ISO_DIR)/boot/
+	@echo "  CP      grub.cfg -> $(ISO_DIR)/boot/grub/"
+	@cp grub.cfg $(ISO_DIR)/boot/grub/
+	@echo "  GRUB    Creating bootable ISO"
+	@grub-mkrescue -o $@ $(ISO_DIR)
 
-# Clean build files
+# Clean
 clean:
-	rm -rf $(BUILD_DIR)
-	rm -rf $(ISO_DIR)
+	@echo "  CLEAN   Removing build artifacts"
+	@rm -f $(BOOT_OBJ) $(KERNEL_OBJ) $(CPU_OBJ) $(MEMORY_OBJ) $(STRING_OBJ) $(TERMINAL_OBJ) $(DRIVERS_OBJ) $(DE_OBJ) $(KERNEL_BIN) $(ISO_BIN)
+	@rm -rf $(ISO_DIR)
+	@echo "Clean completed successfully!"
 
-# Run in QEMU
-run: $(ISO_OUTPUT)
-	qemu-system-i386 -cdrom $(ISO_OUTPUT)
-
-# Run in QEMU with debug options
-debug: $(ISO_OUTPUT)
-	qemu-system-i386 -cdrom $(ISO_OUTPUT) -s -S
-
-# Print variables for debugging
-print-%:
-	@echo '$*=$($*)'
-
-.PHONY: all clean run debug directories print-% 
+.PHONY: all clean 

@@ -1,14 +1,18 @@
+#include "../include/io.h"
+#include "../include/terminal.h"
+#include "../include/keyboard.h"
+#include "../include/interrupt_handlers.h"
+#include "../include/irq.h"
+#include "../kernel/include/interrupt.h"
 #include <stdint.h>
-#include <io.h>
 #include "kernel.h"
-#include "include/interrupt.h"  // Using the kernel version which has interrupt_frame defined
-#include <terminal.h>
 
 // External function declarations
 extern void init_terminal(void);
 extern void update_cursor(void);
 extern void terminal_writestring(const char* data);
 extern void itoa(int value, char* str, int base);
+extern void init_pic(void);  // Declare external init_pic
 
 // Exception messages for CPU exceptions
 static const char* exception_messages[] = {
@@ -58,20 +62,44 @@ void isr_handler(struct interrupt_frame* frame) {
     }
     // Handle hardware interrupts (32+)
     else {
-        // Timer interrupt (IRQ0)
-        if (frame->int_no == 32) {
-            timer_handler();
-        }
-        // Send EOI for hardware interrupts
-        send_eoi(frame->int_no);
+        irq_handler((struct regs*)frame);
     }
 }
 
-// Timer handler
-void timer_handler(void) {
-    timer_ticks++;
-    if (timer_ticks % 100 == 0) {  // Update cursor every second (assuming 100Hz timer)
-        update_cursor();
+// IRQ handler
+void irq_handler(struct regs* r) {
+    // Always send EOI first to prevent interrupt storms
+    send_eoi(r->int_no);
+
+    // Handle timer interrupt (IRQ0)
+    if (r->int_no == 32) {
+        timer_ticks++;
+        if (timer_ticks % 100 == 0) {  // Update cursor every second (assuming 100Hz timer)
+            update_cursor();
+        }
+    }
+    // Handle keyboard interrupt (IRQ1)
+    else if (r->int_no == 33) {
+        // Read keyboard scan code
+        uint8_t scancode = port_in_byte(0x60);
+        
+        // Handle key press/release
+        if (scancode < 0x80) {
+            // Key press
+            char c = keyboard_getchar();
+            if (c) {
+                terminal_putchar(c);
+            }
+        }
+    }
+    // Handle other IRQs (just acknowledge them)
+    else {
+        // Unhandled IRQ - just acknowledge it
+        terminal_writestring("Unhandled IRQ: ");
+        char irq_str[4];
+        itoa(r->int_no - 32, irq_str, 10);
+        terminal_writestring(irq_str);
+        terminal_writestring("\n");
     }
 }
 

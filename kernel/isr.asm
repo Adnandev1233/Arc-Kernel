@@ -1,5 +1,7 @@
 ; Interrupt Service Routines
-global isr_stub_table
+[BITS 32]
+global isr0, isr1, isr2, isr3, isr4, isr5, isr6, isr7
+global isr8, isr9, isr10, isr11, isr12, isr13, isr14, isr15
 global load_idt
 
 extern isr_handler    ; Defined in C
@@ -8,7 +10,7 @@ section .text
 
 ; Macro to create ISR stub
 %macro ISR_NOERRCODE 1
-isr_stub_%1:
+isr%1:
     push dword 0     ; Push dummy error code
     push dword %1    ; Push interrupt number
     jmp isr_common
@@ -16,7 +18,7 @@ isr_stub_%1:
 
 ; Macro for ISR with error code
 %macro ISR_ERRCODE 1
-isr_stub_%1:
+isr%1:
     push dword %1    ; Push interrupt number
     jmp isr_common
 %endmacro
@@ -63,46 +65,14 @@ ISR_ERRCODE   12
 ISR_ERRCODE   13
 ISR_ERRCODE   14
 ISR_NOERRCODE 15
-ISR_NOERRCODE 16
-ISR_ERRCODE   17
-ISR_NOERRCODE 18
-ISR_NOERRCODE 19
-ISR_NOERRCODE 20
-ISR_NOERRCODE 21
-ISR_NOERRCODE 22
-ISR_NOERRCODE 23
-ISR_NOERRCODE 24
-ISR_NOERRCODE 25
-ISR_NOERRCODE 26
-ISR_NOERRCODE 27
-ISR_NOERRCODE 28
-ISR_NOERRCODE 29
-ISR_ERRCODE   30
-ISR_NOERRCODE 31
-
-; Fill remaining ISRs (32-255) with a default handler
-%assign i 32
-%rep 224
-ISR_NOERRCODE i
-%assign i i+1
-%endrep
 
 ; Load IDT
 load_idt:
     push ebp
     mov ebp, esp
-    mov eax, [ebp + 8]  ; Get pointer to IDT
+    mov eax, [ebp + 4]  ; Get pointer to IDT
     lidt [eax]          ; Load IDT
     pop ebp
     ret
-
-; ISR stub table
-section .data
-isr_stub_table:
-%assign i 0
-%rep 256
-    dd isr_stub_%+i     ; Add address of each ISR stub
-%assign i i+1
-%endrep
 
 section .note.GNU-stack noalloc noexec nowrite progbits 
