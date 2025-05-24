@@ -90,6 +90,6 @@ The kernel is loaded at the specified memory location and takes control from the
 
 ## build-support
 
-1.Linux(best option)
-2.MacOS(second best option)
-3.Windows(hard but possible)
+- `1.Linux(best option)`
+- `2.MacOS(second best option)`
+- `3.Windows(hard but possible)`
