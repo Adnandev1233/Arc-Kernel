@@ -1,6 +1,6 @@
-# Custom Operating System
+# ArcOS/Arc Kernel
 
-This is a custom operating system with a two-stage bootloader and kernel implementation.
+This is a custom operating system with a two-stage bootloader and kernel implementation.Why it is called kernel and os at the same time is this can be modified and added a ui in this case it has a basic shell.
 
 ## Prerequisites
 
@@ -87,3 +87,9 @@ The bootloader is implemented in two stages:
 2. Stage 2 (`bootloader_stage2.asm`): Enables A20 line, enters protected mode, and loads the kernel
 
 The kernel is loaded at the specified memory location and takes control from there. 
+
+## build-support
+
+1.Linux(best option)
+2.MacOS(second best option)
+3.Windows(hard but possible)
