@@ -42,7 +42,8 @@ sudo pacman -S make gcc nasm grub xorriso qemu
 To build the operating system:
 
 ```bash
-make clean  # Clean any previous builds
+make clean  # Clean any previous
+make menuconfig
 make        # Build everything
 ```
 
@@ -59,13 +60,6 @@ To run the OS in QEMU:
 ```bash
 make run
 ```
-
-To run with debugging enabled:
-
-```bash
-make debug
-```
-
 ## Project Structure
 
 - `bootloader_stage1.asm`: First stage bootloader (loads stage 2)
