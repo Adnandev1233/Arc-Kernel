@@ -1,7 +1,7 @@
-#include <io.h>
-#include "keyboard.h"
-#include "terminal.h"
-#include <stdint.h>
+#include "include/keyboard.h"
+#include "include/io.h"
+#include "include/terminal.h"
+#include <stdbool.h>
 
 // Command buffer
 extern char command_buffer[KEYBOARD_BUFFER_SIZE];
@@ -55,6 +55,7 @@ char get_ascii_from_scancode(uint8_t scancode) {
     return 0;
 }
 
+// Initialize keyboard
 void keyboard_init(void) {
     // Reset keyboard state
     shift_pressed = false;
@@ -66,6 +67,12 @@ void keyboard_init(void) {
     while ((port_in_byte(KEYBOARD_STATUS_PORT) & 1) != 0) {
         port_in_byte(KEYBOARD_DATA_PORT);
     }
+    
+    // Wait for keyboard controller to be ready
+    while (port_in_byte(KEYBOARD_STATUS_PORT) & 0x02);
+    
+    // Enable keyboard
+    port_out_byte(KEYBOARD_STATUS_PORT, 0xAE);
 }
 
 bool keyboard_is_special_key(uint8_t scancode) {
@@ -138,17 +145,20 @@ bool keyboard_process_scancode(uint8_t scancode, char* c) {
 }
 
 char keyboard_getchar(void) {
-    char c;
     uint8_t scancode;
     
-    while (1) {
-        scancode = keyboard_get_scancode();
-        if (scancode == 0) continue;  // Timeout or invalid scancode
-        
-        if (keyboard_process_scancode(scancode, &c)) {
-            return c;
-        }
+    // Wait for key press
+    while (!(port_in_byte(KEYBOARD_STATUS_PORT) & 0x01));
+    
+    // Read scancode
+    scancode = port_in_byte(KEYBOARD_DATA_PORT);
+    
+    // Convert scancode to ASCII
+    if (scancode < sizeof(scancode_to_ascii)) {
+        return scancode_to_ascii[scancode];
     }
+    
+    return 0;
 }
 
 void keyboard_update_command_line(char* buffer, size_t* pos, size_t max_size) {
@@ -234,4 +244,29 @@ void keyboard_handler(void) {
     
     // Acknowledge the interrupt
     port_out_byte(0x20, 0x20);  // Send EOI to master PIC
+}
+
+// Get line from keyboard
+int keyboard_getline(char* buffer, int max_length) {
+    int i = 0;
+    char c;
+    
+    while (i < max_length - 1) {
+        c = keyboard_getchar();
+        
+        if (c == '\n') {
+            buffer[i] = '\0';
+            return i;
+        } else if (c == '\b') {
+            if (i > 0) {
+                i--;
+                buffer[i] = '\0';
+            }
+        } else if (c != 0) {
+            buffer[i++] = c;
+        }
+    }
+    
+    buffer[i] = '\0';
+    return i;
 } 

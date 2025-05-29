@@ -1,9 +1,25 @@
+#include <stdint.h>
+#include <stdbool.h>
 #include "include/cpu.h"
+#include "include/asm.h"
 
 // CPU information
 static cpu_info_t cpu_info;
 
+// CPU features
+static uint32_t cpu_features_edx = 0;
+static uint32_t cpu_features_ecx = 0;
+
 void cpu_init(void) {
+    uint32_t eax, ebx, ecx, edx;
+    
+    // Get CPU features
+    cpuid(CPUID_FEATURES_EDX, &eax, &ebx, &ecx, &edx);
+    cpu_features_edx = edx;
+    
+    cpuid(CPUID_FEATURES_ECX, &eax, &ebx, &ecx, &edx);
+    cpu_features_ecx = ecx;
+    
     // Get CPU information
     cpu_get_info(&cpu_info);
     
@@ -14,28 +30,20 @@ void cpu_init(void) {
 void cpu_get_info(cpu_info_t* info) {
     uint32_t eax, ebx, ecx, edx;
     
-    #ifdef __GNUC__
     // Get CPU vendor ID
-    __asm__ __volatile__("cpuid"
-                        : "=a" (eax), "=b" (ebx), "=c" (ecx), "=d" (edx)
-                        : "a" (0)
-                        : "memory");
+    cpuid(0, &eax, &ebx, &ecx, &edx);
     
     info->vendor_id[0] = ebx;
     info->vendor_id[1] = edx;
     info->vendor_id[2] = ecx;
     
     // Get CPU features
-    __asm__ __volatile__("cpuid"
-                        : "=a" (eax), "=b" (ebx), "=c" (ecx), "=d" (edx)
-                        : "a" (1)
-                        : "memory");
+    cpuid(1, &eax, &ebx, &ecx, &edx);
     
     info->features = edx;
     info->family = (eax >> 8) & 0xF;
     info->model = (eax >> 4) & 0xF;
     info->stepping = eax & 0xF;
-    #endif
     
     // Get vendor string
     char* vendor = (char*)info->vendor_id;
@@ -58,30 +66,77 @@ uint32_t cpu_get_features(void) {
     return cpu_info.features;
 }
 
+// Check if CPU has specific feature
+bool cpu_has_feature(uint32_t feature) {
+    return (cpu_features_edx & feature) != 0;
+}
+
+// Enable CPU features
 void cpu_enable_features(void) {
-    uint32_t cr0, cr4;
+    uint32_t cr4 = READ_CR4();
     
-    #ifdef __GNUC__
-    // Read CR0
-    __asm__ __volatile__("mov %%cr0, %0" : "=r" (cr0) : : "memory");
-    
-    // Enable FPU
-    cr0 &= ~(1 << 2);  // Clear EM
-    cr0 |= (1 << 1);   // Set MP
-    
-    // Write CR0
-    __asm__ __volatile__("mov %0, %%cr0" : : "r" (cr0) : "memory");
-    
-    // Read CR4
-    __asm__ __volatile__("mov %%cr4, %0" : "=r" (cr4) : : "memory");
-    
-    // Enable SSE if available
-    if (cpu_info.features & CPU_FEATURE_SSE) {
-        cr4 |= (1 << 9);  // Set OSFXSR
-        cr4 |= (1 << 10); // Set OSXMMEXCPT
+    // Enable PAE if supported
+    if (cpu_has_feature(CPUID_FEATURE_PAE)) {
+        cr4 |= CPUID_FEATURE_PAE;
     }
     
-    // Write CR4
-    __asm__ __volatile__("mov %0, %%cr4" : : "r" (cr4) : "memory");
-    #endif
+    // Enable PSE if supported
+    if (cpu_has_feature(CPUID_FEATURE_PSE)) {
+        cr4 |= CPUID_FEATURE_PSE;
+    }
+    
+    // Enable PGE if supported
+    if (cpu_has_feature(CPUID_FEATURE_PGE)) {
+        cr4 |= CPUID_FEATURE_PGE;
+    }
+    
+    // Write back control registers
+    WRITE_CR4(cr4);
+}
+
+// Enable interrupts
+void enable_interrupts(void) {
+    STI();
+}
+
+// Disable interrupts
+void disable_interrupts(void) {
+    CLI();
+}
+
+// Halt CPU
+void halt_cpu(void) {
+    HLT();
+}
+
+// Enable paging
+void enable_paging(uint64_t* page_dir) {
+    // Load the page directory
+    load_page_directory((uint32_t*)page_dir);
+    
+    // Enable paging
+    uint32_t cr0 = READ_CR0();
+    cr0 |= 0x80000000;  // Set PG bit
+    WRITE_CR0(cr0);
+    
+    // Flush TLB
+    flush_tlb();
+}
+
+// Disable paging
+void disable_paging(void) {
+    uint32_t cr0 = READ_CR0();
+    cr0 &= ~0x80000000;  // Clear PG bit
+    WRITE_CR0(cr0);
+}
+
+// Load page directory
+void load_page_directory(uint32_t* page_directory) {
+    WRITE_CR3((uint32_t)page_directory);
+}
+
+// Flush TLB
+void flush_tlb(void) {
+    uint32_t cr3 = READ_CR3();
+    WRITE_CR3(cr3);
 } 

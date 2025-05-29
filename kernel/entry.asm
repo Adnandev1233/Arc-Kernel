@@ -1,37 +1,34 @@
 [BITS 32]
-[GLOBAL _start]
-[EXTERN kernel_main]
 
-; VGA text mode constants
-VGA_WIDTH equ 80
-VGA_HEIGHT equ 25
-VGA_MEMORY equ 0xB8000
-VGA_COLOR_LIGHT_GREY equ 0x07
-VGA_COLOR_RED equ 0x04
-
-; Multiboot header constants
-MBOOT_PAGE_ALIGN    equ 1<<0
-MBOOT_MEM_INFO      equ 1<<1
-MBOOT_HEADER_MAGIC  equ 0x1BADB002
-MBOOT_HEADER_FLAGS  equ MBOOT_PAGE_ALIGN | MBOOT_MEM_INFO
-MBOOT_CHECKSUM      equ -(MBOOT_HEADER_MAGIC + MBOOT_HEADER_FLAGS)
-
-section .multiboot
-align 4
-    dd MBOOT_HEADER_MAGIC
-    dd MBOOT_HEADER_FLAGS
-    dd MBOOT_CHECKSUM
-
+; Stack setup
 section .bss
 align 16
 stack_bottom:
     resb 16384 ; 16 KB stack
 stack_top:
 
+; Kernel entry point
 section .text
+global _start
+extern kernel_main
+
+; Multiboot header must be in the first 8KB of the kernel
+align 4
+    dd 0x1BADB002    ; Magic number
+    dd 0x03          ; Flags: align modules on page boundaries and provide memory map
+    dd -(0x1BADB002 + 0x03)  ; Checksum
+
 _start:
     ; Set up stack
     mov esp, stack_top
+
+    ; Check multiboot magic number
+    cmp eax, 0x2BADB002
+    jne .no_multiboot
+
+    ; Print boot message
+    mov esi, boot_msg
+    call early_print
 
     ; Push multiboot info pointer
     push ebx
@@ -43,6 +40,11 @@ _start:
 .hang:
     cli
     hlt
+    jmp .hang
+
+.no_multiboot:
+    mov esi, no_multiboot_msg
+    call early_print
     jmp .hang
 
 ; Early debug output function
@@ -77,4 +79,12 @@ error:
 boot_msg db 'ArcOS Kernel Starting...', 13, 10, 0
 init_msg db 'Initializing kernel...', 13, 10, 0
 halt_msg db 'Kernel halted.', 13, 10, 0
-error_msg db 'CRITICAL ERROR: System halted.', 13, 10, 0 
+error_msg db 'CRITICAL ERROR: System halted.', 13, 10, 0
+no_multiboot_msg db 'Error: Not loaded by multiboot-compliant bootloader', 13, 10, 0
+
+; VGA text mode constants
+VGA_WIDTH equ 80
+VGA_HEIGHT equ 25
+VGA_MEMORY equ 0xB8000
+VGA_COLOR_LIGHT_GREY equ 0x07
+VGA_COLOR_RED equ 0x04 

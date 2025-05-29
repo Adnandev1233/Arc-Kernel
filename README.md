@@ -1,6 +1,36 @@
-# ArcOS/Arc Kernel
+# ArcOS v0.8k
 
-This is a custom operating system with a two-stage bootloader and kernel implementation.Why it is called kernel and os at the same time is this can be modified and added a ui in this case it has a basic shell.
+A 32-bit operating system written in C and assembly.
+
+## Building
+
+```bash
+make menuconfig  # Configure build options
+make            # Build the OS
+make run        # Run in QEMU
+```
+
+## Features
+
+- 32-bit protected mode
+- VESA/VBE graphics support
+- Basic GUI framework
+- File system support
+- Disk I/O
+- Memory management
+- Interrupt handling
+- Keyboard and mouse input
+
+## Requirements
+
+- GCC (32-bit)
+- NASM
+- Make
+- QEMU (for running)
+
+## License
+
+MIT License
 
 ## Prerequisites
 
@@ -37,35 +67,6 @@ sudo dnf install make gcc nasm grub2 xorriso qemu-system-x86
 sudo pacman -S make gcc nasm grub xorriso qemu
 ```
 
-## Building
-
-To build the operating system:
-
-```bash
-make clean  # Clean any previous builds
-make        # Build everything
-```
-
-This will:
-1. Compile the bootloader stages
-2. Compile the kernel
-3. Create a disk image
-4. Create a bootable ISO
-
-## Running
-
-To run the OS in QEMU:
-
-```bash
-make run
-```
-
-To run with debugging enabled:
-
-```bash
-make debug
-```
-
 ## Project Structure
 
 - `bootloader_stage1.asm`: First stage bootloader (loads stage 2)
@@ -93,3 +94,19 @@ The kernel is loaded at the specified memory location and takes control from the
 1.Linux(best option)
 2.MacOS(second best option)
 3.Windows(hard but possible)
+
+## Known Issues
+
+### Multiboot Error (0x1000)
+The kernel is currently experiencing a multiboot error with code 0x1000. This error occurs during the boot process and indicates that the kernel is not being properly recognized as a multiboot-compliant kernel. The error appears in white text on the screen.
+
+Current investigation points to potential issues with:
+1. Multiboot header placement
+2. Kernel loading address
+3. GRUB configuration
+
+Work in progress to resolve this issue.
+
+## Contributing
+
+Feel free to submit issues and pull requests.

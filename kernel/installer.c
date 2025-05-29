@@ -1,31 +1,19 @@
 #include <stddef.h>
 #include <string.h>
 #include <stdbool.h>
-#include "../include/installer.h"
-#include <terminal.h>
+#include "include/installer.h"
+#include "include/terminal.h"
+#include "include/disk.h"
+#include "include/fs.h"
+#include <stdint.h>
+#include "stdio.h"
 
 // Global state
 static bool installer_initialized = false;
-static enum install_status current_status = INSTALL_STATUS_OK;
-
-// Helper function to convert integer to string
-static void itoa(int value, char* str, int base) {
-    char* ptr = str, *ptr1 = str, tmp_char;
-    int tmp_value;
-
-    do {
-        tmp_value = value;
-        value /= base;
-        *ptr++ = "0123456789abcdef"[tmp_value - value * base];
-    } while (value);
-
-    *ptr-- = '\0';
-    while (ptr1 < ptr) {
-        tmp_char = *ptr;
-        *ptr-- = *ptr1;
-        *ptr1++ = tmp_char;
-    }
-}
+static install_status_t current_status = INSTALL_SUCCESS;
+static install_config_t current_config;
+static uint8_t current_state = INSTALL_STATE_INIT;
+static char error_message[256] = "";
 
 // Implementation of installer functions
 bool installer_init(void) {
@@ -35,51 +23,89 @@ bool installer_init(void) {
     
     // Initialize installer state
     installer_initialized = true;
-    current_status = INSTALL_STATUS_OK;
+    current_status = INSTALL_SUCCESS;
+    current_state = INSTALL_STATE_INIT;
+    memset(&current_config, 0, sizeof(current_config));
+    memset(error_message, 0, sizeof(error_message));
     
     return true;
 }
 
-int installer_get_targets(struct install_target* targets, int* count) {
-    if (!installer_initialized || !targets || !count) {
-        return 0;
-    }
+void installer_get_targets(install_target_t* targets, int* count) {
+    (void)targets;  // Mark as intentionally unused
     
-    // For now, return a dummy target
-    targets[0].drive = 0x80;  // First hard drive
-    strcpy(targets[0].model, "Dummy Drive");
-    targets[0].size_mb = 1024;  // 1GB
+    // Get available drives
+    disk_drive_t drives[4];  // Support up to 4 drives
+    int drive_count = 0;
+    disk_get_drives(drives, &drive_count);
     
-    *count = 1;
-    return 1;
+    // Set count to 0 for now
+    *count = 0;
+    
+    // TODO: Implement target detection
+    // This will involve:
+    // 1. Checking each drive for valid partitions
+    // 2. Checking for free space
+    // 3. Populating the targets array
 }
 
-enum install_status installer_install(const struct install_config* config) {
-    if (!installer_initialized || !config) {
-        return INSTALL_STATUS_ERROR;
-    }
-    
-    // Simulate installation
-    terminal_writestring("Installing to drive ");
-    char drive_str[8];
-    itoa(config->target_drive, drive_str, 16);
-    terminal_writestring(drive_str);
-    terminal_writestring("\n");
-    
-    return INSTALL_STATUS_OK;
+install_status_t installer_install(const install_config_t* config) {
+    (void)config;  // Unused parameter
+    return INSTALL_ERROR_NO_TARGETS;
 }
 
-const char* installer_status_message(enum install_status status) {
+const char* installer_status_message(install_status_t status) {
     switch (status) {
-        case INSTALL_STATUS_OK:
-            return "Installation completed successfully";
-        case INSTALL_STATUS_ERROR:
-            return "Installation failed";
-        case INSTALL_STATUS_IN_PROGRESS:
-            return "Installation in progress";
-        case INSTALL_STATUS_CANCELLED:
-            return "Installation cancelled";
+        case INSTALL_SUCCESS:
+            return "Installation successful";
+        case INSTALL_ERROR_NO_TARGETS:
+            return "No installation targets available";
+        case INSTALL_ERROR_INVALID_TARGET:
+            return "Invalid installation target";
+        case INSTALL_ERROR_IO:
+            return "I/O error during installation";
+        case INSTALL_ERROR_FORMAT:
+            return "Error formatting drive";
+        case INSTALL_ERROR_PARTITION:
+            return "Error partitioning drive";
+        case INSTALL_ERROR_FILESYSTEM:
+            return "Error creating filesystem";
+        case INSTALL_ERROR_BOOTLOADER:
+            return "Error installing bootloader";
         default:
-            return "Unknown status";
+            return "Unknown error";
     }
+}
+
+bool installer_start(const install_config_t* config) {
+    (void)config;  // Unused parameter
+    return false;
+}
+
+bool installer_partition_disk(void) {
+    return false;
+}
+
+bool installer_format_partition(void) {
+    return false;
+}
+
+bool installer_copy_files(void) {
+    return false;
+}
+
+bool installer_configure_system(void) {
+    return false;
+}
+
+void installer_cleanup(void) {
+    current_state = INSTALL_STATE_INIT;
+}
+
+uint8_t installer_get_state(void) {
+    return current_state;
+}
+
+const char* installer_get_error(void) {
+    return error_message;
 } 

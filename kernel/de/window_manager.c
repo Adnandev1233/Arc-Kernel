@@ -137,7 +137,11 @@ void wm_main_loop(void) {
         // Handle mouse input
         int x, y;
         bool left_button;
-        get_mouse_state(&x, &y, &left_button);
+        mouse_state_t state;
+        get_mouse_state(&state);
+        x = state.x;
+        y = state.y;
+        left_button = state.left_button;
         wm_handle_mouse(x, y, left_button);
         
         // Handle keyboard input

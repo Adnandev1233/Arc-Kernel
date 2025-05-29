@@ -46,7 +46,7 @@ void kfree(void* ptr);
 bool init_paging(void);
 
 // External symbols
-extern uint32_t start;
-extern uint32_t end;
+extern uint64_t start;
+extern uint64_t end;
 
 #endif // KERNEL_H 

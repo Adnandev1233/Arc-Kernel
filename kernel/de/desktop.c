@@ -141,11 +141,13 @@ void desktop_handle_mouse(int x, int y, bool left_button) {
 void desktop_main(void) {
     int x, y;
     bool left_button;
+    mouse_state_t state;
+    get_mouse_state(&state);
+    x = state.x;
+    y = state.y;
+    left_button = state.left_button;
     
     while (is_running) {
-        // Get mouse state
-        get_mouse_state(&x, &y, &left_button);
-        
         // Handle mouse input
         if (left_button) {
             desktop_handle_mouse(x, y, left_button);

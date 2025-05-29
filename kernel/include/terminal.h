@@ -36,5 +36,12 @@ void terminal_write_string(const char* str);
 void terminal_write_dec(uint32_t num);
 void terminal_put_pixel(int x, int y, uint32_t color);
 void terminal_draw_string(int x, int y, const char* str, uint32_t color);
+void terminal_move_cursor_left(void);
+void terminal_move_cursor_right(void);
+void terminal_delete_char(void);
+void terminal_putchar(char c);
+
+// VGA helper functions
+uint8_t vga_entry_color(uint8_t fg, uint8_t bg);
 
 #endif // TERMINAL_H 

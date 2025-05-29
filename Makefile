@@ -1,124 +1,81 @@
-# Compiler and linker settings
-AS = nasm
+# Compiler and flags
 CC = gcc
+AS = nasm
 LD = ld
-
-# Colors for output
-GREEN = \033[0;32m
-BLUE = \033[0;34m
-YELLOW = \033[0;33m
-RED = \033[0;31m
-NC = \033[0m
-
-# Flags
+CFLAGS = -m32 -ffreestanding -fno-pie -fno-stack-protector -fno-pic -fno-builtin -Wall -Wextra -Werror -std=gnu99 -I./kernel/include
 ASFLAGS = -f elf32
-CFLAGS = -m32 -ffreestanding -fno-pie -fno-stack-protector -nostdlib -c -I$(INCLUDE_DIR) -Wall -Wextra -masm=intel
 LDFLAGS = -m elf_i386 -T kernel/linker.ld -nostdlib
 
+# Host compiler flags (for tools)
+HOST_CFLAGS = -Wall -Wextra -std=gnu99
+
 # Directories
-BOOT_DIR = boot
 KERNEL_DIR = kernel
-DRIVERS_DIR = kernel/drivers
-DE_DIR = kernel/de
-INCLUDE_DIR = kernel/include
+BUILD_DIR = build
+CONFIG_DIR = config
+ISO_DIR = $(BUILD_DIR)/iso
+BOOT_DIR = $(ISO_DIR)/boot/grub
 
 # Source files
-BOOT_SRC = $(BOOT_DIR)/boot.asm
-KERNEL_SRC = $(KERNEL_DIR)/kernel.c
-CPU_SRC = $(KERNEL_DIR)/cpu.c
-MEMORY_SRC = $(KERNEL_DIR)/memory.c
-STRING_SRC = $(KERNEL_DIR)/string.c
-TERMINAL_SRC = $(KERNEL_DIR)/terminal.c
-DRIVERS_SRC = $(wildcard $(DRIVERS_DIR)/*.c)
-DE_SRC = $(DE_DIR)/desktop.c $(DE_DIR)/dock.c $(DE_DIR)/menu_bar.c $(DE_DIR)/window_manager.c
-
-# Object files
-BOOT_OBJ = $(BOOT_SRC:.asm=.o)
-KERNEL_OBJ = $(KERNEL_SRC:.c=.o)
-CPU_OBJ = $(CPU_SRC:.c=.o)
-MEMORY_OBJ = $(MEMORY_SRC:.c=.o)
-STRING_OBJ = $(STRING_SRC:.c=.o)
-TERMINAL_OBJ = $(TERMINAL_SRC:.c=.o)
-DRIVERS_OBJ = $(DRIVERS_SRC:.c=.o)
-DE_OBJ = $(DE_SRC:.c=.o)
-
-# Output files
-KERNEL_BIN = kernel.bin
-ISO_DIR = iso
-ISO_BIN = os.iso
+KERNEL_SRC = $(filter-out $(KERNEL_DIR)/menuconfig.c,$(wildcard $(KERNEL_DIR)/*.c))
+KERNEL_ASM = $(filter-out $(KERNEL_DIR)/boot.asm,$(wildcard $(KERNEL_DIR)/*.asm))
+KERNEL_OBJ = $(KERNEL_SRC:.c=.o) $(KERNEL_ASM:.asm=.o)
 
 # Default target
-all: $(ISO_BIN)
-	@echo "$(GREEN)Build completed successfully!$(NC)"
-	@echo "$(BLUE)"
-	@echo "    _    ____   ____  _____  ____  "
-	@echo "   / \  |  _ \ / ___||  ___|/ ___| "
-	@echo "  / _ \ | |_) | |    | |_  \___ \ "
-	@echo " / ___ \|  _ <| |___ |  _|  ___) |"
-	@echo "/_/   \_\_| \_\\____||_|   |____/ "
-	@echo "$(NC)"
+all: $(BUILD_DIR)/os.iso
 
-# Build bootloader
-$(BOOT_OBJ): $(BOOT_SRC)
-	@echo "  AS      $<"
-	@$(AS) $(ASFLAGS) -o $@ $<
+# Create build directories
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
 
-# Build kernel
-$(KERNEL_OBJ): $(KERNEL_SRC)
-	@echo "  CC      $<"
-	@$(CC) $(CFLAGS) -o $@ $<
+$(ISO_DIR):
+	mkdir -p $(ISO_DIR)
 
-# Build CPU
-$(CPU_OBJ): $(CPU_SRC)
-	@echo "  CC      $<"
-	@$(CC) $(CFLAGS) -o $@ $<
+$(BOOT_DIR):
+	mkdir -p $(BOOT_DIR)
 
-# Build memory
-$(MEMORY_OBJ): $(MEMORY_SRC)
-	@echo "  CC      $<"
-	@$(CC) $(CFLAGS) -o $@ $<
+# Configuration
+menuconfig: $(BUILD_DIR)/menuconfig
+	@if [ ! -d $(CONFIG_DIR) ]; then \
+		mkdir -p $(CONFIG_DIR); \
+	fi
+	@cd $(CONFIG_DIR) && ../$(BUILD_DIR)/menuconfig
 
-# Build string
-$(STRING_OBJ): $(STRING_SRC)
-	@echo "  CC      $<"
-	@$(CC) $(CFLAGS) -o $@ $<
+$(BUILD_DIR)/menuconfig: kernel/menuconfig.c | $(BUILD_DIR)
+	$(CC) $(HOST_CFLAGS) -o $@ $< -lncurses
 
-# Build terminal
-$(TERMINAL_OBJ): $(TERMINAL_SRC)
-	@echo "  CC      $<"
-	@$(CC) $(CFLAGS) -o $@ $<
+# Compile kernel
+$(BUILD_DIR)/kernel.bin: $(KERNEL_OBJ) | $(BUILD_DIR)
+	$(LD) $(LDFLAGS) -o $@ $(sort $(KERNEL_OBJ))
 
-# Build drivers
-$(DRIVERS_OBJ): $(DRIVERS_SRC)
-	@echo "  CC      $<"
-	@$(CC) $(CFLAGS) -o $@ $<
+# Create ISO image
+$(BUILD_DIR)/os.iso: $(BUILD_DIR)/kernel.bin kernel/grub.cfg | $(ISO_DIR) $(BOOT_DIR)
+	@echo "Creating ISO directory structure..."
+	@mkdir -p $(BOOT_DIR)
+	@cp $(BUILD_DIR)/kernel.bin $(ISO_DIR)/boot/
+	@cp kernel/grub.cfg $(BOOT_DIR)/
+	@echo "Creating bootable ISO..."
+	@grub-mkrescue -o $@ $(ISO_DIR) --compress=xz
 
-# Build desktop environment
-$(DE_DIR)/%.o: $(DE_DIR)/%.c
-	@echo "  CC      $<"
-	@$(CC) $(CFLAGS) -o $@ $<
+# Compile C files
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
-# Link kernel
-$(KERNEL_BIN): $(BOOT_OBJ) $(KERNEL_OBJ) $(CPU_OBJ) $(MEMORY_OBJ) $(STRING_OBJ) $(TERMINAL_OBJ) $(DRIVERS_OBJ) $(DE_OBJ)
-	@echo "  LD      $@"
-	@$(LD) $(LDFLAGS) $^ -o $@
+# Compile assembly files
+%.o: %.asm
+	$(AS) $(ASFLAGS) $< -o $@
 
-# Create ISO
-$(ISO_BIN): $(KERNEL_BIN)
-	@echo "  MKDIR   $(ISO_DIR)/boot/grub"
-	@mkdir -p $(ISO_DIR)/boot/grub
-	@echo "  CP      $(KERNEL_BIN) -> $(ISO_DIR)/boot/"
-	@cp $(KERNEL_BIN) $(ISO_DIR)/boot/
-	@echo "  CP      grub.cfg -> $(ISO_DIR)/boot/grub/"
-	@cp grub.cfg $(ISO_DIR)/boot/grub/
-	@echo "  GRUB    Creating bootable ISO"
-	@grub-mkrescue -o $@ $(ISO_DIR)
+# Run the kernel
+run: $(BUILD_DIR)/os.iso
+	qemu-system-i386 -cdrom $(BUILD_DIR)/os.iso -boot d -m 512M -serial stdio
 
-# Clean
+# Clean build files
 clean:
-	@echo "  CLEAN   Removing build artifacts"
-	@rm -f $(BOOT_OBJ) $(KERNEL_OBJ) $(CPU_OBJ) $(MEMORY_OBJ) $(STRING_OBJ) $(TERMINAL_OBJ) $(DRIVERS_OBJ) $(DE_OBJ) $(KERNEL_BIN) $(ISO_BIN)
-	@rm -rf $(ISO_DIR)
-	@echo "Clean completed successfully!"
+	rm -f $(KERNEL_OBJ) $(BUILD_DIR)/kernel.bin $(BUILD_DIR)/os.iso $(BUILD_DIR)/menuconfig
+	rm -rf $(ISO_DIR)
 
-.PHONY: all clean 
+# Clean everything including config
+distclean: clean
+	rm -rf $(BUILD_DIR) $(CONFIG_DIR)
+
+.PHONY: all menuconfig run clean distclean 

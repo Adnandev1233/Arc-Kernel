@@ -18,14 +18,14 @@
 #define MOUSE_CMD_SET_SAMPLE_RATE 0xF3
 #define MOUSE_CMD_SET_RESOLUTION 0xE8
 
-// Mouse packet structure
+// Mouse state structure
 typedef struct {
     int x;
     int y;
     bool left_button;
     bool right_button;
     bool middle_button;
-} mouse_packet_t;
+} mouse_state_t;
 
 // Function declarations
 void mouse_init(void);
@@ -34,5 +34,7 @@ void mouse_get_position(int* x, int* y);
 bool mouse_get_button_state(uint8_t button);
 void mouse_set_sample_rate(uint8_t rate);
 void mouse_set_resolution(uint8_t resolution);
+void get_mouse_state(mouse_state_t* state);
+void mouse_set_position(int x, int y);
 
 #endif // MOUSE_H 

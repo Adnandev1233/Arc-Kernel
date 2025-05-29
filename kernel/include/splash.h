@@ -23,5 +23,6 @@ void splash_draw_logo(int x, int y);
 void splash_draw_text(const char* text, int x, int y, uint32_t color);
 void splash_draw_progress_bar(int x, int y, int width, int height, int progress);
 void splash_cleanup(void);
+void splash_show(void);
 
 #endif // SPLASH_H 

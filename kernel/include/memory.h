@@ -3,6 +3,9 @@
 
 #include <stddef.h>
 
+// Memory initialization
+void memory_init(void);
+
 // Memory allocation functions
 void* kmalloc(size_t size);
 void kfree(void* ptr);

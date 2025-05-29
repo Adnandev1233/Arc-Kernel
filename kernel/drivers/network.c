@@ -12,7 +12,7 @@ static NetworkDevice devices[MAX_NETWORK_DEVICES];
 static int device_count = 0;
 
 // Initialize network subsystem
-void network_init(void) {
+bool network_init(void) {
     // Clear device list
     memset(devices, 0, sizeof(devices));
     device_count = 0;
@@ -23,6 +23,8 @@ void network_init(void) {
     // 2. Initializing each card
     // 3. Setting up DMA
     // 4. Configuring interrupts
+    
+    return true; // Return true if initialization was successful
 }
 
 // Register a network device
@@ -40,11 +42,8 @@ int network_register_device(NetworkDevice* device) {
 }
 
 // Send a packet through the specified device
-bool network_send_packet(int device_id, NetworkPacket* packet) {
-    if (device_id < 0 || device_id >= device_count) return false;
-    
-    NetworkDevice* device = &devices[device_id];
-    if (!device->is_up || !device->is_running) return false;
+bool network_send_packet(NetworkDevice* device, NetworkPacket* packet) {
+    if (!device || !device->is_up || !device->is_running) return false;
     
     // Call device's send function
     if (device->send_packet) {
@@ -56,11 +55,8 @@ bool network_send_packet(int device_id, NetworkPacket* packet) {
 }
 
 // Receive a packet from the specified device
-bool network_receive_packet(int device_id, NetworkPacket* packet) {
-    if (device_id < 0 || device_id >= device_count) return false;
-    
-    NetworkDevice* device = &devices[device_id];
-    if (!device->is_up || !device->is_running) return false;
+bool network_receive_packet(NetworkDevice* device, NetworkPacket* packet) {
+    if (!device || !device->is_up || !device->is_running) return false;
     
     // Call device's receive function
     if (device->receive_packet) {
@@ -72,24 +68,23 @@ bool network_receive_packet(int device_id, NetworkPacket* packet) {
 }
 
 // Get device MAC address
-void network_get_mac_address(int device_id, uint8_t* mac_address) {
-    if (device_id < 0 || device_id >= device_count) return;
+void network_get_mac_address(NetworkDevice* device, uint8_t* mac_address) {
+    if (!device) return;
     
-    memcpy(mac_address, devices[device_id].mac_address, 6);
+    memcpy(mac_address, device->mac_address, 6);
 }
 
 // Set device MAC address
-void network_set_mac_address(int device_id, const uint8_t* mac_address) {
-    if (device_id < 0 || device_id >= device_count) return;
+void network_set_mac_address(NetworkDevice* device, const uint8_t* mac_address) {
+    if (!device) return;
     
-    memcpy(devices[device_id].mac_address, mac_address, 6);
+    memcpy(device->mac_address, mac_address, 6);
 }
 
 // Enable/disable network device
-void network_set_device_state(int device_id, bool enabled) {
-    if (device_id < 0 || device_id >= device_count) return;
+void network_set_device_state(NetworkDevice* device, bool enabled) {
+    if (!device) return;
     
-    NetworkDevice* device = &devices[device_id];
     device->is_up = enabled;
     
     // TODO: Update hardware state
@@ -100,17 +95,15 @@ void network_set_device_state(int device_id, bool enabled) {
 }
 
 // Check if device is up
-bool network_is_device_up(int device_id) {
-    if (device_id < 0 || device_id >= device_count) return false;
+bool network_is_device_up(NetworkDevice* device) {
+    if (!device) return false;
     
-    return devices[device_id].is_up;
+    return device->is_up;
 }
 
 // Handle network interrupt
-void network_handle_interrupt(int device_id) {
-    if (device_id < 0 || device_id >= device_count) return;
-    
-    NetworkDevice* device = &devices[device_id];
+void network_handle_interrupt(NetworkDevice* device) {
+    if (!device) return;
     
     // TODO: Handle hardware interrupt
     // This would typically involve:

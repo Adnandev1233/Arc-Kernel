@@ -1,4 +1,5 @@
 #include "include/terminal.h"
+#include "include/io.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -18,12 +19,17 @@ static size_t terminal_column = 0;
 static uint8_t terminal_color = 0x0F; // White on black
 static uint16_t* terminal_buffer = (uint16_t*) VGA_MEMORY;
 
+// Create a VGA entry color byte
+uint8_t vga_entry_color(uint8_t fg, uint8_t bg) {
+    return fg | bg << 4;
+}
+
 // Initialize terminal
 void terminal_initialize(void) {
     terminal_row = 0;
     terminal_column = 0;
-    terminal_color = VGA_COLOR_LIGHT_GREY;
-    terminal_buffer = VGA_MEMORY;
+    terminal_color = vga_entry_color(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK);
+    terminal_buffer = (uint16_t*)VGA_MEMORY;
     terminal_clear();
 }
 
@@ -186,4 +192,9 @@ void terminal_clear_line(void) {
         terminal_column = 0;
         update_cursor();
     }
+}
+
+void terminal_putchar(char c) {
+    terminal_put_char(c);
+    update_cursor();
 } 

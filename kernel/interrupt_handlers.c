@@ -10,7 +10,7 @@
 // External function declarations
 extern void init_terminal(void);
 extern void update_cursor(void);
-extern void terminal_writestring(const char* data);
+extern void terminal_write_string(const char* data);
 extern void itoa(int value, char* str, int base);
 extern void init_pic(void);  // Declare external init_pic
 
@@ -47,15 +47,25 @@ void send_eoi(uint32_t int_no) {
 
 // ISR handler
 void isr_handler(struct interrupt_frame* frame) {
+    char num_str[12]; // Buffer for integer to string conversion
+    terminal_write_string("Interrupt received: ");
+    itoa(frame->int_no, num_str, 10);
+    terminal_write_string(num_str);
+    terminal_write_string("\n");
+    terminal_write_string("Error code: ");
+    itoa(frame->err_code, num_str, 10);
+    terminal_write_string(num_str);
+    terminal_write_string("\n");
+
     // Handle CPU exceptions (interrupts 0-31)
     if (frame->int_no < 32) {
-        terminal_writestring("Exception: ");
+        terminal_write_string("Exception: ");
         if (frame->int_no < 16) {
-            terminal_writestring(exception_messages[frame->int_no]);
+            terminal_write_string(exception_messages[frame->int_no]);
         } else {
-            terminal_writestring("Reserved Exception");
+            terminal_write_string("Reserved Exception");
         }
-        terminal_writestring("\n");
+        terminal_write_string("\n");
         
         // Halt the system
         for(;;);
@@ -68,6 +78,12 @@ void isr_handler(struct interrupt_frame* frame) {
 
 // IRQ handler
 void irq_handler(struct regs* r) {
+    char num_str[12]; // Buffer for integer to string conversion
+    terminal_write_string("IRQ received: ");
+    itoa(r->int_no, num_str, 10);
+    terminal_write_string(num_str);
+    terminal_write_string("\n");
+
     // Always send EOI first to prevent interrupt storms
     send_eoi(r->int_no);
 
@@ -95,11 +111,11 @@ void irq_handler(struct regs* r) {
     // Handle other IRQs (just acknowledge them)
     else {
         // Unhandled IRQ - just acknowledge it
-        terminal_writestring("Unhandled IRQ: ");
+        terminal_write_string("Unhandled IRQ: ");
         char irq_str[4];
         itoa(r->int_no - 32, irq_str, 10);
-        terminal_writestring(irq_str);
-        terminal_writestring("\n");
+        terminal_write_string(irq_str);
+        terminal_write_string("\n");
     }
 }
 
