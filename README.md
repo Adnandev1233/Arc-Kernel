@@ -1,8 +1,7 @@
-<<<<<<< HEAD
+
 # ArcOS v0.8k
-=======
+-------------
 # ArcOS
->>>>>>> fa9bf03d04d64bb18a57d49fe12bcffdb4f75b54
 
 A 32-bit operating system written in C and assembly.
 
@@ -71,8 +70,6 @@ sudo dnf install make gcc nasm grub2 xorriso qemu-system-x86
 sudo pacman -S make gcc nasm grub xorriso qemu
 ```
 
-<<<<<<< HEAD
-=======
 ## Building
 
 To build the operating system:
@@ -96,7 +93,6 @@ To run the OS in QEMU:
 ```bash
 make run
 ```
->>>>>>> fa9bf03d04d64bb18a57d49fe12bcffdb4f75b54
 ## Project Structure
 
 - `bootloader_stage1.asm`: First stage bootloader (loads stage 2)
@@ -121,7 +117,6 @@ The kernel is loaded at the specified memory location and takes control from the
 
 ## build-support
 
-<<<<<<< HEAD
 1.Linux(best option)
 2.MacOS(second best option)
 3.Windows(hard but possible)
@@ -141,8 +136,7 @@ Work in progress to resolve this issue.
 ## Contributing
 
 Feel free to submit issues and pull requests.
-=======
+
 - `1.Linux(best option)`
 - `2.MacOS(second best option)`
 - `3.Windows(hard but possible)`
->>>>>>> fa9bf03d04d64bb18a57d49fe12bcffdb4f75b54
