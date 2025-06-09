@@ -74,8 +74,4 @@ clean:
 	rm -f $(KERNEL_OBJ) $(BUILD_DIR)/kernel.bin $(BUILD_DIR)/os.iso $(BUILD_DIR)/menuconfig
 	rm -rf $(ISO_DIR)
 
-# Clean everything including config
-distclean: clean
-	rm -rf $(BUILD_DIR) $(CONFIG_DIR)
-
 .PHONY: all menuconfig run clean distclean 
