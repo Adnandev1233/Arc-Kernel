@@ -5,6 +5,8 @@ LD = ld
 CFLAGS = -m32 -ffreestanding -fno-pie -fno-stack-protector -fno-pic -fno-builtin -Wall -Wextra -Werror -std=gnu99 -I./kernel/include
 ASFLAGS = -f elf32
 LDFLAGS = -m elf_i386 -T kernel/linker.ld -nostdlib
+PY = python
+INS = installer.py
 
 # Host compiler flags (for tools)
 HOST_CFLAGS = -Wall -Wextra -std=gnu99
@@ -73,5 +75,8 @@ run: $(BUILD_DIR)/os.iso
 clean:
 	rm -f $(KERNEL_OBJ) $(BUILD_DIR)/kernel.bin $(BUILD_DIR)/os.iso $(BUILD_DIR)/menuconfig
 	rm -rf $(ISO_DIR)
+
+ins: $(PY)$(INS)
+
 
 .PHONY: all menuconfig run clean distclean 
