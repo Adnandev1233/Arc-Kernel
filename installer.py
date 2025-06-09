@@ -1,0 +1,8 @@
+print("Please enter you'r new user name")
+N = input("> ")
+print("info saved at /bin/user/dart")
+print("Choose a install medium")
+print("1.Test 2.Install")
+S = input("> ")
+print("This data will be attached at the main os")
+print("DATA WRITTEN EXITING")
